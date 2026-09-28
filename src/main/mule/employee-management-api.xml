@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+    <apikit:config name="employee-management-api-config" api="resource::1d1d76b0-701f-44b4-90a1-555b1a4f8f00:employee-management-api:1.0.0:raml:zip:employee-management-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <db:config name="Database_Config" doc:name="Database Config" doc:id="1af51ac7-9183-412c-b646-8770573e098e" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" database="employee_db" />
+	</db:config>
+	<flow name="employee-management-api-main">
+        <http:listener config-ref="HTTP_Listener_config" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="employee-management-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="employee-management-api-console">
+        <http:listener config-ref="HTTP_Listener_config" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="employee-management-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="put:\employees\(id):application\json:employee-management-api-config">
+        <logger level="INFO" message="put:\employees\(id):application\json:employee-management-api-config" />
+		<db:update doc:name="Update" doc:id="08c97375-efeb-44e4-a9a9-2010f4331b7e" config-ref="Database_Config">
+			<db:sql ><![CDATA[UPDATE employees
+SET name = :name,
+    email = :email,
+    department = :department,
+    salary = :salary
+WHERE id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+    id: attributes.uriParams.id as Number,
+    name: payload.name,
+    email: payload.email,
+    department: payload.department,
+    salary: payload.salary
+}]]]></db:input-parameters>
+		</db:update>
+		<choice doc:name="Choice" doc:id="4f4f9311-d6a7-4d63-abe1-2321d1a91495" >
+			<when expression="payload.affectedRows &gt; 0">
+				<ee:transform doc:name="Transform Message" doc:id="e49ea1c6-91b6-47d5-8b26-1f9aa30a885a" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    message: "Employee updated successfully",
+    id: attributes.uriParams.id
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise >
+				<set-variable value="404" doc:name="Set Variable" doc:id="eabceca8-5799-4885-a9a9-e3207f2554e3" variableName="httpStatus"/>
+				<ee:transform doc:name="Transform Message" doc:id="d4ca1c21-2397-44b3-aef9-73b0f221fcf0" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    message: "Employee not found",
+    id: attributes.uriParams.id
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+	<flow name="delete:\employees\(id):employee-management-api-config">
+        <logger level="INFO" message="#[attributes]" />
+		<set-variable value="#[attributes.uriParams.id as Number]" doc:name="Set Variable" doc:id="f1fdf673-eb04-41e4-b58c-73752403d2fc" variableName="employeeId"/>
+		<db:select doc:name="Select" doc:id="1bd8ef32-240c-4e71-9642-63557b744e1f" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT id, name, email, department, salary
+FROM employees
+WHERE id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+    id: vars.employeeId
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="0ac6948c-d7fb-43ba-80ff-89f6f9fa0aae" >
+			<when expression="sizeOf(payload) &gt; 0">
+				<db:delete doc:name="Delete" doc:id="e205520d-8c05-4bac-8b6b-e8e328d5a8b0" config-ref="Database_Config">
+			<db:sql><![CDATA[DELETE FROM employees
+WHERE id = :id]]></db:sql>
+			<db:input-parameters><![CDATA[#[{
+    id: vars.employeeId
+}]]]></db:input-parameters>
+		</db:delete>
+				<set-variable value="204" doc:name="Set Variable" doc:id="ff5858bb-ab22-4c7c-9ef1-c2ebc13f1a22" variableName="httpStatus"/>
+				<set-payload value="#[null]" doc:name="Set Payload" doc:id="506a182f-8640-4225-8a08-b105a2f205ed" />
+			</when>
+			<otherwise >
+				<set-variable value="404" doc:name="Set Variable" doc:id="3e0f72e0-5fa6-4d2d-87d8-952de9a5a838" variableName="httpStatus"/>
+				<ee:transform doc:name="Transform Message" doc:id="d52d4f96-2d42-4448-906a-2874fcb56616" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    message: "Employee not found",
+    id: attributes.uriParams.id
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+    <flow name="get:\employees:employee-management-api-config">
+        <logger level="INFO" message="get:\employees:employee-management-api-config" />
+		<db:select doc:name="Select" doc:id="82deb5de-52e9-4b76-8f0d-9af648d49aee" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT id, name, email, department, salary
+FROM employees;]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="8732ae94-d648-4875-bdd9-4d1d98945f5e">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+    <flow name="get:\employees\(id):employee-management-api-config">
+        <logger level="INFO" message="get:\employees\(id):employee-management-api-config" />
+		<db:select doc:name="Select" doc:id="f4acc104-35fc-4ea3-8187-19bbf8222eb3" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT id, name, email, department, salary
+FROM employees
+WHERE id = :id]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+    id: attributes.uriParams.id as Number
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="18612be5-3f4b-46a0-98ff-8042f66611ac" >
+			<when expression="sizeOf(payload) &gt; 0">
+				<ee:transform doc:name="Transform Message" doc:id="e2497123-e564-467e-8e03-178a66204757">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload[0]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<set-variable value="404" doc:name="Set Variable" doc:id="814c5aa8-d520-4119-a23e-cd4a86e5845a" variableName="httpStatus"/>
+				<ee:transform doc:name="Transform Message" doc:id="719ff979-895f-441f-8f8d-9319eeb53e44" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    message: "Employee not found",
+    id: attributes.uriParams.id
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+    </flow>
+    <flow name="post:\employees:application\json:employee-management-api-config">
+        <logger level="INFO" message="post:\employees:application\json:employee-management-api-config" />
+		<ee:transform doc:name="Transform Message" doc:id="548fc106-afae-4abb-b0ce-64721c4f16f1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    id: 4,
+    name: payload.name,
+    email: payload.email,
+    department: payload.department,
+    salary: payload.salary
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<validation:is-not-blank-string doc:name="Is not blank string" doc:id="0189130b-047c-4fe9-8384-1d489d41f39e" value="#[payload.name]"/>
+		<validation:is-email doc:name="Is email" doc:id="c670916d-201f-4517-b69e-3e2e6928d089" email="#[payload.email]"/>
+		<db:insert doc:name="Insert" doc:id="0ddd008c-a442-4be0-85af-23c699f48ffe" config-ref="Database_Config">
+			<db:sql ><![CDATA[INSERT INTO employees
+(name, email, department, salary)
+VALUES
+(:name, :email, :department, :salary)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+    name: payload.name,
+    email: payload.email,
+    department: payload.department,
+    salary: payload.salary
+}]]]></db:input-parameters>
+		</db:insert>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="014162b9-6b72-44f4-accf-abd155298de5" >
+				<choice doc:name="Choice" doc:id="acebdc36-e1c4-4879-9b64-3899b7391112" >
+					<when expression='#[error.errorType.identifier == "INVALID_EMAIL"]'>
+						<set-variable value="400" doc:name="Set Variable" doc:id="2c7f1347-a781-4f81-b890-0d50501b0e61" variableName="httpStatus"/>
+						<ee:transform doc:name="Transform Message" doc:id="ecb03251-f3b0-4c17-bae3-0312d9e895a6" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    status: 400,
+    message: "Please provide a valid email address."
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+					</when>
+					<when expression='#[error.errorType.identifier == "BLANK_STRING"]'>
+						<set-variable value="400" doc:name="Set Variable" doc:id="3c8a16c5-cb8e-4d9b-952b-bc4e9e30ede9" variableName="httpStatus"/>
+						<ee:transform doc:name="Transform Message" doc:id="2d6152db-0144-43b8-8e34-f09e9b69180a" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    errorType: "BLANK_STRING",
+    message: "Required employee field cannot be blank"
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+					</when>
+					<otherwise >
+						<ee:transform doc:name="Transform Message" doc:id="9b063fb6-715d-488b-abf2-b64060456cf6" >
+							<ee:message >
+								<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+    errorType: "VALIDATION_ERROR",
+    message: "Employee data validation failed"
+}]]></ee:set-payload>
+							</ee:message>
+						</ee:transform>
+					</otherwise>
+				</choice>
+			</on-error-propagate>
+		</error-handler>
+    </flow>
+</mule>

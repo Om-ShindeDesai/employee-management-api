@@ -1,0 +1,25 @@
+# Anypoint Studio / Eclipse
+.metadata/
+.settings/
+.project
+.classpath
+
+# Maven
+target/
+
+# MuleSoft
+.mule/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Local environment files
+.env
