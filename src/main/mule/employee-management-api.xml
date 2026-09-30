@@ -281,18 +281,55 @@ output application/json
 		</ee:transform>
 		<validation:is-not-blank-string doc:name="Is not blank string" doc:id="0189130b-047c-4fe9-8384-1d489d41f39e" value="#[payload.name]"/>
 		<validation:is-email doc:name="Is email" doc:id="c670916d-201f-4517-b69e-3e2e6928d089" email="#[payload.email]"/>
-		<db:insert doc:name="Insert" doc:id="0ddd008c-a442-4be0-85af-23c699f48ffe" config-ref="Database_Config">
-			<db:sql ><![CDATA[INSERT INTO employees
+		<set-variable value="#[payload]" doc:name="Set Variable" doc:id="6b1cd60b-b9c2-4a88-9086-22d2962308c0" variableName="employeePayload"/>
+		<db:select doc:name="Select" doc:id="f60d0859-4bbb-49fe-b6fa-2a4803f0280a" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT COUNT(*) AS count
+FROM employees
+WHERE email = :email]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+    email: vars.employeePayload.email
+}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="ca3174d7-2452-48f2-8f86-a218c6b24a95" >
+			<when expression="#[payload[0].count as Number &gt; 0]">
+				<ee:transform doc:name="Transform Message" doc:id="d8fcb3fb-7d66-4850-b265-a3cc07e7f00d">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    message: "Employee with this email already exists",
+    email: vars.employeePayload.email
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<set-variable value="409" doc:name="Set Variable" doc:id="82c82631-bd01-4f75-ba35-9cefb065126b" variableName="httpStatus"/>
+			</when>
+			<otherwise >
+				<db:insert doc:name="Insert" doc:id="0ddd008c-a442-4be0-85af-23c699f48ffe" config-ref="Database_Config">
+			<db:sql><![CDATA[INSERT INTO employees
 (name, email, department, salary)
 VALUES
 (:name, :email, :department, :salary)]]></db:sql>
-			<db:input-parameters ><![CDATA[#[{
-    name: payload.name,
-    email: payload.email,
-    department: payload.department,
-    salary: payload.salary
+			<db:input-parameters><![CDATA[#[{
+    name: vars.employeePayload.name,
+    email: vars.employeePayload.email,
+    department: vars.employeePayload.department,
+    salary: vars.employeePayload.salary
 }]]]></db:input-parameters>
 		</db:insert>
+				<ee:transform doc:name="Transform Message" doc:id="fc3e9d10-1024-499d-9c21-ea7edc98e802" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"message": "Employee Inserted Successfully!!"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
 		<error-handler >
 			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="014162b9-6b72-44f4-accf-abd155298de5" >
 				<choice doc:name="Choice" doc:id="acebdc36-e1c4-4879-9b64-3899b7391112" >
